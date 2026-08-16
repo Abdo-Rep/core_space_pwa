@@ -83,12 +83,6 @@ export default function App() {
       if (viewingsRes.isLocal) isAnyLocal = true;
 
       setIsLoading(false);
-
-      if (isAnyLocal) {
-        triggerAlert('تعذر الاتصال بـ Supabase. تعمل في الوضع المحلي');
-      } else {
-        triggerAlert('تمت مزامنة البيانات مع السيرفر بنجاح');
-      }
     };
 
     loadAllData();
