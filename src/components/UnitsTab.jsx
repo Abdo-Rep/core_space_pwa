@@ -59,9 +59,16 @@ export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddM
                 {/* Header with badge, title and delete button */}
                 <div className="card-header-compact" style={{ borderBottom: '1px dashed rgba(255, 255, 255, 0.08)', paddingBottom: '6px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
-                    <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`} style={{ alignSelf: 'flex-start' }}>
-                      {unit.type}
-                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`}>
+                        {unit.type}
+                      </span>
+                      {unit.id && unit.id.toString().startsWith('local_') && (
+                        <span className="badge-pending-sync">
+                          ⏳ جاري المزامنة...
+                        </span>
+                      )}
+                    </div>
                     <h3 className="card-title-compact" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {unit.title}
                     </h3>

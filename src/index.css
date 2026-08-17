@@ -550,6 +550,19 @@ body {
   border: 1px solid rgba(251, 191, 36, 0.2);
 }
 
+.badge-pending-sync {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Card details styling */
 .card-detail-item {
   display: flex;

@@ -32,9 +32,16 @@ export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOp
               {/* Header with name/badge on right and delete icon button on left */}
               <div className="card-header-compact">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
-                  <span className={`card-badge ${client.type === 'شراء' ? 'badge-buy' : 'badge-rent'}`} style={{ alignSelf: 'flex-start' }}>
-                    {client.type}
-                  </span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className={`card-badge ${client.type === 'شراء' ? 'badge-buy' : 'badge-rent'}`}>
+                      {client.type}
+                    </span>
+                    {client.id && client.id.toString().startsWith('local_') && (
+                      <span className="badge-pending-sync">
+                        ⏳ جاري المزامنة...
+                      </span>
+                    )}
+                  </div>
                   <h3 className="card-title-compact" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {client.name}
                   </h3>

@@ -55,10 +55,15 @@ export default function ViewingsTab({ viewings, onDeleteViewing, onOpenAddModal 
           {sortedViewings.map(viewing => (
             <div key={viewing.id} className="card viewing-card">
               {/* Formatted Date/Time badge */}
-              <div style={{ alignSelf: 'flex-start' }}>
+              <div style={{ alignSelf: 'flex-start', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="viewing-date-badge">
                   🕒 {formatArabicDateTime(viewing.viewing_time)}
                 </span>
+                {viewing.id && viewing.id.toString().startsWith('local_') && (
+                  <span className="badge-pending-sync">
+                    ⏳ جاري المزامنة...
+                  </span>
+                )}
               </div>
 
               {/* Client Name with User Icon */}

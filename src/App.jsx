@@ -14,7 +14,8 @@ import {
 import { 
   dbGetClients, dbAddClient, dbDeleteClient,
   dbGetUnits, dbAddUnit, dbDeleteUnit,
-  dbGetViewings, dbAddViewing, dbDeleteViewing
+  dbGetViewings, dbAddViewing, dbDeleteViewing,
+  syncOfflineData
 } from './utils/supabaseClient';
 
 export default function App() {
@@ -92,6 +93,16 @@ export default function App() {
 
         const viewingsRes = await dbGetViewings();
         setViewings(viewingsRes.data);
+
+        // Run background sync coordinator on load
+        await syncOfflineData(
+          clientsRes.data,
+          unitsRes.data,
+          viewingsRes.data,
+          setClients,
+          setUnits,
+          setViewings
+        );
       } catch (err) {
         console.warn('Silent background synchronization failed:', err.message);
       }
@@ -100,99 +111,199 @@ export default function App() {
     loadAllDataSilently();
   }, []);
 
+  // Automatically trigger sync when network status changes to online
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('App detected online connection, triggering sync offline data...');
+      syncOfflineData(clients, units, viewings, setClients, setUnits, setViewings);
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [clients, units, viewings]);
+
   // ----------------------------------------------------
   // CLIENTS ACTIONS
   // ----------------------------------------------------
   const handleAddClient = async (clientData) => {
-    setIsLoading(true);
-    const res = await dbAddClient(clientData);
-    if (res.success) {
-      setClients(prev => [res.data, ...prev]);
-      triggerAlert('تم إضافة العميل بنجاح');
-    } else {
-      triggerAlert('فشلت إضافة العميل');
-    }
-    setIsLoading(false);
+    const tempId = 'local_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    const newClient = {
+      id: tempId,
+      name: clientData.name,
+      phone: clientData.phone,
+      type: clientData.type,
+      budget: clientData.budget || '',
+      notes: clientData.notes || '',
+      created_at: new Date().toISOString()
+    };
+
+    // Update state immediately
+    setClients(prev => [newClient, ...prev]);
+
+    // Update localStorage cache immediately
+    const local = JSON.parse(localStorage.getItem('cs_clients') || '[]');
+    localStorage.setItem('cs_clients', JSON.stringify([newClient, ...local]));
+
+    triggerAlert('جاري حفظ وإضافة العميل... ⏳');
+
+    // Perform database insertion in background
+    dbAddClient(newClient).then(res => {
+      if (res.success && !res.isLocal) {
+        setClients(prev => prev.map(c => c.id === tempId ? res.data : c));
+        triggerAlert('تم حفظ ومزامنة العميل بنجاح ✅');
+      } else {
+        triggerAlert('تم حفظ العميل محلياً (سيتم المزامنة لاحقاً)');
+      }
+    }).catch(err => {
+      console.error('Background add client error:', err);
+    });
   };
 
   const handleDeleteClient = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا العميل؟ سيتم حذف معايناته المرتبطة تلقائياً.')) return;
     
-    setIsLoading(true);
-    const res = await dbDeleteClient(id, clients);
-    if (res.success) {
-      setClients(prev => prev.filter(c => c.id !== id));
-      // Delete local viewings pointing to this client
-      setViewings(prev => prev.filter(v => v.client_id !== id));
-      triggerAlert('تم حذف العميل بنجاح');
-    } else {
-      triggerAlert('فشل حذف العميل');
-    }
-    setIsLoading(false);
+    // Update local state immediately
+    setClients(prev => prev.filter(c => c.id !== id));
+    setViewings(prev => prev.filter(v => v.client_id !== id));
+
+    // Update localStorage immediately
+    const localClients = JSON.parse(localStorage.getItem('cs_clients') || '[]');
+    localStorage.setItem('cs_clients', JSON.stringify(localClients.filter(c => c.id !== id)));
+
+    const localViewings = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+    localStorage.setItem('cs_viewings', JSON.stringify(localViewings.filter(v => v.client_id !== id)));
+
+    triggerAlert('جاري حذف العميل... ⏳');
+
+    dbDeleteClient(id, clients).then(res => {
+      if (res.success) {
+        triggerAlert('تم حذف العميل بنجاح ✅');
+      } else {
+        triggerAlert('فشل حذف العميل من السحابة (تم الحذف محلياً)');
+      }
+    }).catch(err => {
+      console.error('Background delete client error:', err);
+    });
   };
 
   // ----------------------------------------------------
   // UNITS ACTIONS
   // ----------------------------------------------------
   const handleAddUnit = async (unitData) => {
-    setIsLoading(true);
-    const res = await dbAddUnit(unitData);
-    if (res.success) {
-      setUnits(prev => [res.data, ...prev]);
-      triggerAlert('تم إضافة العقار بنجاح');
-    } else {
-      triggerAlert('فشلت إضافة العقار');
-    }
-    setIsLoading(false);
+    const tempId = 'local_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    const newUnit = {
+      id: tempId,
+      owner_phone: unitData.owner_phone || '',
+      title: unitData.title,
+      type: unitData.type,
+      price: unitData.price || '',
+      images: unitData.images || [],
+      notes: unitData.notes || '',
+      created_at: new Date().toISOString()
+    };
+
+    setUnits(prev => [newUnit, ...prev]);
+
+    const local = JSON.parse(localStorage.getItem('cs_units') || '[]');
+    localStorage.setItem('cs_units', JSON.stringify([newUnit, ...local]));
+
+    triggerAlert('جاري حفظ وإضافة العقار... ⏳');
+
+    dbAddUnit(newUnit).then(res => {
+      if (res.success && !res.isLocal) {
+        setUnits(prev => prev.map(u => u.id === tempId ? res.data : u));
+        triggerAlert('تم حفظ ومزامنة العقار بنجاح ✅');
+      } else {
+        triggerAlert('تم حفظ العقار محلياً (سيتم المزامنة لاحقاً)');
+      }
+    }).catch(err => {
+      console.error('Background add unit error:', err);
+    });
   };
 
   const handleDeleteUnit = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا العقار؟ سيتم حذف معايناته المرتبطة تلقائياً.')) return;
 
-    setIsLoading(true);
-    const res = await dbDeleteUnit(id, units);
-    if (res.success) {
-      setUnits(prev => prev.filter(u => u.id !== id));
-      // Delete local viewings pointing to this unit
-      setViewings(prev => prev.filter(v => v.unit_id !== id));
-      triggerAlert('تم حذف العقار بنجاح');
-    } else {
-      triggerAlert('فشل حذف العقار');
-    }
-    setIsLoading(false);
+    setUnits(prev => prev.filter(u => u.id !== id));
+    setViewings(prev => prev.filter(v => v.unit_id !== id));
+
+    const localUnits = JSON.parse(localStorage.getItem('cs_units') || '[]');
+    localStorage.setItem('cs_units', JSON.stringify(localUnits.filter(u => u.id !== id)));
+
+    const localViewings = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+    localStorage.setItem('cs_viewings', JSON.stringify(localViewings.filter(v => v.unit_id !== id)));
+
+    triggerAlert('جاري حذف العقار... ⏳');
+
+    dbDeleteUnit(id, units).then(res => {
+      if (res.success) {
+        triggerAlert('تم حذف العقار بنجاح ✅');
+      } else {
+        triggerAlert('فشل حذف العقار من السحابة (تم الحذف محلياً)');
+      }
+    }).catch(err => {
+      console.error('Background delete unit error:', err);
+    });
   };
 
   // ----------------------------------------------------
   // VIEWING ACTIONS
   // ----------------------------------------------------
   const handleAddViewing = async (viewingData) => {
-    setIsLoading(true);
-    const res = await dbAddViewing(viewingData);
-    if (res.success) {
-      // Re-fetch or add and sort in state
-      setViewings(prev => {
-        const updated = [...prev, res.data];
-        return updated.sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
-      });
-      triggerAlert('تم جدولة المعاينة بنجاح');
-    } else {
-      triggerAlert('فشلت جدولة المعاينة');
-    }
-    setIsLoading(false);
+    const tempId = 'local_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    const newViewing = {
+      id: tempId,
+      client_id: viewingData.client_id,
+      unit_id: viewingData.unit_id,
+      client_name: viewingData.client_name,
+      unit_title: viewingData.unit_title,
+      viewing_time: viewingData.viewing_time,
+      notes: viewingData.notes || '',
+      created_at: new Date().toISOString()
+    };
+
+    setViewings(prev => {
+      const updated = [...prev, newViewing];
+      return updated.sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
+    });
+
+    const local = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+    const updatedLocal = [...local, newViewing].sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
+    localStorage.setItem('cs_viewings', JSON.stringify(updatedLocal));
+
+    triggerAlert('جاري حفظ وجدولة المعاينة... ⏳');
+
+    dbAddViewing(newViewing).then(res => {
+      if (res.success && !res.isLocal) {
+        setViewings(prev => prev.map(v => v.id === tempId ? res.data : v).sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time)));
+        triggerAlert('تم حفظ وجدولة المعاينة بنجاح ✅');
+      } else {
+        triggerAlert('تم حفظ المعاينة محلياً (سيتم المزامنة لاحقاً)');
+      }
+    }).catch(err => {
+      console.error('Background add viewing error:', err);
+    });
   };
 
   const handleDeleteViewing = async (id) => {
     if (!window.confirm('هل أنت متأكد من إلغاء موعد هذه المعاينة؟')) return;
 
-    setIsLoading(true);
-    const res = await dbDeleteViewing(id, viewings);
-    if (res.success) {
-      setViewings(prev => prev.filter(v => v.id !== id));
-      triggerAlert('تم إلغاء المعاينة بنجاح');
-    } else {
-      triggerAlert('فشل إلغاء المعاينة');
-    }
-    setIsLoading(false);
+    setViewings(prev => prev.filter(v => v.id !== id));
+
+    const localViewings = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+    localStorage.setItem('cs_viewings', JSON.stringify(localViewings.filter(v => v.id !== id)));
+
+    triggerAlert('جاري إلغاء المعاينة... ⏳');
+
+    dbDeleteViewing(id, viewings).then(res => {
+      if (res.success) {
+        triggerAlert('تم إلغاء المعاينة بنجاح ✅');
+      } else {
+        triggerAlert('فشل إلغاء المعاينة من السحابة (تم الإلغاء محلياً)');
+      }
+    }).catch(err => {
+      console.error('Background delete viewing error:', err);
+    });
   };
 
 
