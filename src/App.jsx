@@ -183,12 +183,7 @@ export default function App() {
     setIsLoading(false);
   };
 
-  // Helper to open modal based on currently active tab
-  const handleFabClick = () => {
-    if (activeTab === 'home' || activeTab === 'clients') setIsAddClientOpen(true);
-    if (activeTab === 'units') setIsAddUnitOpen(true);
-    if (activeTab === 'viewings') setIsAddViewingOpen(true);
-  };
+
 
   return (
     <>
@@ -282,13 +277,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Action Button (FAB) */}
-      <button className="fab-btn" onClick={handleFabClick} title="إضافة عنصر جديد">
-        {/* Plus SVG Icon */}
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-      </button>
+
 
       {/* Fixed Bottom Navigation Footer */}
       <nav className="bottom-nav">
