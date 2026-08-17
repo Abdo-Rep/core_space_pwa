@@ -35,7 +35,7 @@
 }
 
 /* Dark Mode Theme Variables (Default) */
-body[data-theme="dark"] {
+[data-theme="dark"] {
   --body-bg: #02050b;
   --primary-color: #030914; /* Deep Obsidian Black */
   --primary-light: #0d1527; /* Dark Tech Blue-Grey */
@@ -107,7 +107,7 @@ body[data-theme="dark"] {
 }
 
 /* Light Mode Theme Variables */
-body[data-theme="light"] {
+[data-theme="light"] {
   --body-bg: #cbd5e1; /* Smooth grey backdrop outside root on desktop */
   --primary-color: #0d2447; /* Brand Dark Navy */
   --primary-light: #f1f5f9; /* Soft light blue-grey */

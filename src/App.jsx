@@ -29,7 +29,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    document.body.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cs_theme', theme);
   }, [theme]);
 
@@ -37,12 +37,31 @@ export default function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  // Data States
-  const [clients, setClients] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [viewings, setViewings] = useState([]);
+  // Data States (Loaded instantly from local storage cache)
+  const [clients, setClients] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('cs_clients') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [units, setUnits] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('cs_units') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [viewings, setViewings] = useState(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+      return data.sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
+    } catch {
+      return [];
+    }
+  });
 
-  // UI States
+  // UI States (Starts false on startup to prevent blocking loaders)
   const [isLoading, setIsLoading] = useState(false);
   const [alertMsg, setAlertMsg] = useState('');
   const [selectedClientForMatch, setSelectedClientForMatch] = useState(null);
@@ -61,31 +80,24 @@ export default function App() {
     }, 3000);
   };
 
-  // Initial Data Fetching from Supabase / localStorage Fallback
+  // Silent Background Fetching (No blocking loading spinners on launch)
   useEffect(() => {
-    const loadAllData = async () => {
-      setIsLoading(true);
-      let isAnyLocal = false;
+    const loadAllDataSilently = async () => {
+      try {
+        const clientsRes = await dbGetClients();
+        setClients(clientsRes.data);
 
-      // Load Clients
-      const clientsRes = await dbGetClients();
-      setClients(clientsRes.data);
-      if (clientsRes.isLocal) isAnyLocal = true;
+        const unitsRes = await dbGetUnits();
+        setUnits(unitsRes.data);
 
-      // Load Units
-      const unitsRes = await dbGetUnits();
-      setUnits(unitsRes.data);
-      if (unitsRes.isLocal) isAnyLocal = true;
-
-      // Load Viewings
-      const viewingsRes = await dbGetViewings();
-      setViewings(viewingsRes.data);
-      if (viewingsRes.isLocal) isAnyLocal = true;
-
-      setIsLoading(false);
+        const viewingsRes = await dbGetViewings();
+        setViewings(viewingsRes.data);
+      } catch (err) {
+        console.warn('Silent background synchronization failed:', err.message);
+      }
     };
 
-    loadAllData();
+    loadAllDataSilently();
   }, []);
 
   // ----------------------------------------------------
