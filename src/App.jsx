@@ -101,7 +101,8 @@ export default function App() {
           viewingsRes.data,
           setClients,
           setUnits,
-          setViewings
+          setViewings,
+          triggerAlert
         );
       } catch (err) {
         console.warn('Silent background synchronization failed:', err.message);
@@ -115,7 +116,7 @@ export default function App() {
   useEffect(() => {
     const handleOnline = () => {
       console.log('App detected online connection, triggering sync offline data...');
-      syncOfflineData(clients, units, viewings, setClients, setUnits, setViewings);
+      syncOfflineData(clients, units, viewings, setClients, setUnits, setViewings, triggerAlert);
     };
 
     window.addEventListener('online', handleOnline);
@@ -152,7 +153,7 @@ export default function App() {
         setClients(prev => prev.map(c => c.id === tempId ? res.data : c));
         triggerAlert('تم حفظ ومزامنة العميل بنجاح ✅');
       } else {
-        triggerAlert('تم حفظ العميل محلياً (سيتم المزامنة لاحقاً)');
+        triggerAlert(`فشل مزامنة العميل: ${res.error || 'خطأ غير معروف'}`);
       }
     }).catch(err => {
       console.error('Background add client error:', err);
@@ -214,7 +215,7 @@ export default function App() {
         setUnits(prev => prev.map(u => u.id === tempId ? res.data : u));
         triggerAlert('تم حفظ ومزامنة العقار بنجاح ✅');
       } else {
-        triggerAlert('تم حفظ العقار محلياً (سيتم المزامنة لاحقاً)');
+        triggerAlert(`فشل مزامنة العقار: ${res.error || 'خطأ غير معروف'}`);
       }
     }).catch(err => {
       console.error('Background add unit error:', err);
@@ -278,7 +279,7 @@ export default function App() {
         setViewings(prev => prev.map(v => v.id === tempId ? res.data : v).sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time)));
         triggerAlert('تم حفظ وجدولة المعاينة بنجاح ✅');
       } else {
-        triggerAlert('تم حفظ المعاينة محلياً (سيتم المزامنة لاحقاً)');
+        triggerAlert(`فشل مزامنة المعاينة: ${res.error || 'خطأ غير معروف'}`);
       }
     }).catch(err => {
       console.error('Background add viewing error:', err);

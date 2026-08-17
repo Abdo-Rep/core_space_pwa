@@ -77,7 +77,7 @@ export const dbAddClient = async (client) => {
       const updatedLocal = [newClient, ...local];
       localStorage.setItem('cs_clients', JSON.stringify(updatedLocal));
     }
-    return { success: true, data: newClient, isLocal: true };
+    return { success: true, data: newClient, isLocal: true, error: err.message || String(err) };
   }
 };
 
@@ -169,7 +169,7 @@ export const dbAddUnit = async (unit) => {
       const updatedLocal = [newUnit, ...local];
       localStorage.setItem('cs_units', JSON.stringify(updatedLocal));
     }
-    return { success: true, data: newUnit, isLocal: true };
+    return { success: true, data: newUnit, isLocal: true, error: err.message || String(err) };
   }
 };
 
@@ -270,7 +270,7 @@ export const dbAddViewing = async (viewing) => {
       const updatedLocal = [...local, newViewing].sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
       localStorage.setItem('cs_viewings', JSON.stringify(updatedLocal));
     }
-    return { success: true, data: newViewing, isLocal: true };
+    return { success: true, data: newViewing, isLocal: true, error: err.message || String(err) };
   }
 };
 
@@ -298,7 +298,7 @@ export const dbDeleteViewing = async (id, currentViewings) => {
 /**
  * OFFLINE DATA SYNC COORDINATOR
  */
-export const syncOfflineData = async (clients, units, viewings, setClients, setUnits, setViewings) => {
+export const syncOfflineData = async (clients, units, viewings, setClients, setUnits, setViewings, onSyncError) => {
   // Sync clients first
   const pendingClients = (clients || []).filter(c => c.id && c.id.toString().startsWith('local_'));
   const clientMap = {};
@@ -311,6 +311,8 @@ export const syncOfflineData = async (clients, units, viewings, setClients, setU
         if (setClients) {
           setClients(prev => prev.map(c => c.id === client.id ? res.data : c));
         }
+      } else if (res.error && onSyncError) {
+        onSyncError(`فشل مزامنة العميل ${client.name}: ${res.error}`);
       }
     } catch (err) {
       console.error('Failed to sync client in batch:', client.name, err);
@@ -329,6 +331,8 @@ export const syncOfflineData = async (clients, units, viewings, setClients, setU
         if (setUnits) {
           setUnits(prev => prev.map(u => u.id === unit.id ? res.data : u));
         }
+      } else if (res.error && onSyncError) {
+        onSyncError(`فشل مزامنة العقار ${unit.title}: ${res.error}`);
       }
     } catch (err) {
       console.error('Failed to sync unit in batch:', unit.title, err);
@@ -380,6 +384,8 @@ export const syncOfflineData = async (clients, units, viewings, setClients, setU
         if (setViewings) {
           setViewings(prev => prev.map(v => v.id === viewing.id ? res.data : v));
         }
+      } else if (res.error && onSyncError) {
+        onSyncError(`فشل مزامنة المعاينة: ${res.error}`);
       }
     } catch (err) {
       console.error('Failed to sync viewing in batch:', viewing.client_name, err);
