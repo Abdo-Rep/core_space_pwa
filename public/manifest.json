@@ -3,8 +3,8 @@
   "name": "Core Space CRM",
   "icons": [
     {
-      "src": "/logo.png",
-      "type": "image/png",
+      "src": "/logo.png.jpg",
+      "type": "image/jpeg",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
@@ -12,6 +12,6 @@
   "start_url": "/",
   "background_color": "#0d2447",
   "theme_color": "#0d2447",
-  "display": "browser",
+  "display": "standalone",
   "orientation": "portrait"
 }
