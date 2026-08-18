@@ -454,17 +454,11 @@ body {
   100% { box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4), 0 0 0 0px rgba(59, 130, 246, 0); }
 }
 
-/* Bento Grid Cards (Ultra Glassmorphism Grid Layout) */
+/* Bento Grid Cards (Ultra Glassmorphism Grid Layout) - Stacked horizontal rectangles */
 .cards-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-}
-
-@media (max-width: 380px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .card {

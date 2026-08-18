@@ -419,14 +419,14 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
   // Selection handlers
   const handleClientSelect = (client) => {
     setSelectedClient(client);
-    setClientSearch('');
+    setClientSearch(client.name);
     setShowClientDropdown(false);
     if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
   };
 
   const handleUnitSelect = (unit) => {
     setSelectedUnit(unit);
-    setUnitSearch('');
+    setUnitSearch(unit.title);
     setShowUnitDropdown(false);
     if (errors.unit) setErrors(prev => ({ ...prev, unit: '' }));
   };
@@ -497,7 +497,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
   const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
-    if (!selectedClient) newErrors.client = 'يرجى اختيار عميل من القائمة';
+    if (!selectedClient && !clientSearch.trim()) newErrors.client = 'يرجى اختيار أو كتابة اسم العميل';
     if (!selectedUnit) newErrors.unit = 'يرجى اختيار وحدة عقارية من القائمة';
     
     const combinedISO = getCombinedDateTimeISO();
@@ -509,8 +509,8 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
     }
 
     onSave({
-      client_id: selectedClient.id,
-      client_name: selectedClient.name,
+      client_id: selectedClient ? selectedClient.id : 'custom_' + Date.now(),
+      client_name: selectedClient ? selectedClient.name : clientSearch.trim(),
       unit_id: selectedUnit.id,
       unit_title: selectedUnit.title,
       viewing_time: combinedISO,
@@ -518,9 +518,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
     });
     
     handleClose();
-  };
-
-  const handleClose = () => {
+  };  const handleClose = () => {
     setClientSearch('');
     setSelectedClient(null);
     setShowClientDropdown(false);
@@ -588,11 +586,13 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
             <input 
               type="text" 
               className={`form-input ${errors.client ? 'input-error' : ''}`} 
-              placeholder="ابحث باسم العميل أو رقم هاتفه، أو اضغط للعرض..." 
+              placeholder="ابحث باسم العميل أو رقم هاتفه، أو اكتب اسماً جديداً..." 
               value={clientSearch}
               onChange={(e) => {
                 setClientSearch(e.target.value);
+                setSelectedClient(null); // Clear selection if typing manually
                 setShowClientDropdown(true);
+                if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
               }}
               onFocus={() => setShowClientDropdown(true)}
               onBlur={() => setTimeout(() => setShowClientDropdown(false), 250)}
@@ -603,7 +603,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
               <div className="autocomplete-dropdown">
                 {filteredClients.length === 0 ? (
                   <div className="autocomplete-item" style={{ color: 'var(--text-muted)', cursor: 'default' }}>
-                    لا يوجد عملاء مطابين للبحث
+                    لا يوجد عملاء مطابين للبحث (اكتب الاسم مباشرة إذا كان غير مسجل)
                   </div>
                 ) : (
                   filteredClients.map(c => (
@@ -625,6 +625,11 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
                 <span>العميل المختار: <strong>{selectedClient.name} ({selectedClient.phone})</strong></span>
+              </div>
+            )}
+            {!selectedClient && clientSearch.trim() && (
+              <div className="selected-badge-info" style={{ background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+                <span>العميل المكتوب (غير مسجل): <strong>{clientSearch.trim()}</strong></span>
               </div>
             )}
           </div>
@@ -796,6 +801,132 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
             <button type="button" className="btn btn-secondary" onClick={handleClose}>إلغاء</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 4. UnitDetailsModal Component
+ */
+export function UnitDetailsModal({ isOpen, onClose, unit, onDelete }) {
+  if (!isOpen || !unit) return null;
+
+  const hasImages = unit.images && unit.images.length > 0;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title" style={{ flex: 1 }}>تفاصيل العقار</h3>
+          <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`} style={{ alignSelf: 'center', marginLeft: '12px' }}>
+            {unit.type}
+          </span>
+          <button className="modal-close-btn" onClick={onClose}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
+          {/* Images Grid or Carousel */}
+          {hasImages ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="unit-card-media" style={{ height: '200px', borderRadius: '12px', overflow: 'hidden' }}>
+                <img 
+                  src={unit.images[0]} 
+                  alt={unit.title} 
+                  className="unit-thumbnail" 
+                  style={{ height: '200px', objectFit: 'cover', width: '100%' }}
+                />
+              </div>
+              {unit.images.length > 1 && (
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {unit.images.map((img, idx) => (
+                    <img 
+                      key={idx} 
+                      src={img} 
+                      alt={`detail-${idx}`} 
+                      style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--card-glass-border)' }} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="unit-card-media" style={{ height: '120px', borderRadius: '12px', overflow: 'hidden' }}>
+              <div className="unit-image-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '32px', height: '32px' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h18v18H3V3z" />
+                </svg>
+                <span style={{ fontSize: '11px', marginTop: '4px' }}>لا يوجد صور</span>
+              </div>
+            </div>
+          )}
+
+          {/* Title */}
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{unit.title}</h4>
+          </div>
+
+          {/* Details list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-glass-border)' }}>
+            {unit.owner_phone && (
+              <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+                <span>المالك: <strong>
+                  <a href={`tel:${unit.owner_phone}`} style={{ textDecoration: 'none', color: 'var(--secondary-color)', fontFamily: 'Outfit' }}>
+                    {unit.owner_phone}
+                  </a>
+                </strong></span>
+              </div>
+            )}
+
+            {unit.price && (
+              <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <span>السعر: <strong className="price-tag" style={{ fontSize: '14px' }}>{unit.price}</strong></span>
+              </div>
+            )}
+
+            {unit.id && unit.id.toString().startsWith('local_') && (
+              <div className="card-detail-item" style={{ fontSize: '13px', color: '#fbbf24' }}>
+                ⏳ جاري المزامنة مع السيرفر السحابي...
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          {unit.notes && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span className="form-label">ملاحظات العقار</span>
+              <div className="card-notes" style={{ fontSize: '12px', padding: '10px 12px', borderRightWidth: '4px' }}>
+                {unit.notes}
+              </div>
+            </div>
+          )}
+
+          {/* Delete action in details modal */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+            <button 
+              className="btn btn-secondary" 
+              style={{ color: 'var(--color-error)', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', fontSize: '12px', padding: '8px 16px' }}
+              onClick={() => {
+                if (window.confirm('هل أنت متأكد من حذف هذا العقار؟')) {
+                  onDelete(unit.id);
+                  onClose();
+                }
+              }}
+            >
+              حذف العقار 🗑️
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

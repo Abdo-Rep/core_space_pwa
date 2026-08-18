@@ -9,7 +9,8 @@ import ReportsModal from './components/ReportsModal';
 import { 
   AddClientModal, 
   AddUnitModal, 
-  AddViewingModal 
+  AddViewingModal,
+  UnitDetailsModal
 } from './components/Modals';
 import { 
   dbGetClients, dbAddClient, dbDeleteClient,
@@ -21,8 +22,9 @@ import {
 export default function App() {
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState('home'); // home | clients | units | viewings
-  const [activeSubTabClients, setActiveSubTabClients] = useState('شراء'); // شراء | إيجار
-  const [activeSubTabUnits, setActiveSubTabUnits] = useState('للبيع'); // للبيع | للإيجار
+  const [activeSubTabClients, setActiveSubTabClients] = useState('الكل'); // الكل | شراء | إيجار
+  const [activeSubTabUnits, setActiveSubTabUnits] = useState('الكل'); // الكل | للبيع | للإيجار
+  const [selectedUnitForDetails, setSelectedUnitForDetails] = useState(null);
 
   // Theme State (Dark/Light Mode)
   const [theme, setTheme] = useState(() => {
@@ -321,6 +323,12 @@ export default function App() {
       {activeTab === 'clients' && (
         <div className="sub-header-bar">
           <button 
+            className={`pill-button ${activeSubTabClients === 'الكل' ? 'active' : ''}`}
+            onClick={() => setActiveSubTabClients('الكل')}
+          >
+            الكل
+          </button>
+          <button 
             className={`pill-button ${activeSubTabClients === 'شراء' ? 'active' : ''}`}
             onClick={() => setActiveSubTabClients('شراء')}
           >
@@ -337,6 +345,12 @@ export default function App() {
 
       {activeTab === 'units' && (
         <div className="sub-header-bar">
+          <button 
+            className={`pill-button ${activeSubTabUnits === 'الكل' ? 'active' : ''}`}
+            onClick={() => setActiveSubTabUnits('الكل')}
+          >
+            الكل
+          </button>
           <button 
             className={`pill-button ${activeSubTabUnits === 'للبيع' ? 'active' : ''}`}
             onClick={() => setActiveSubTabUnits('للبيع')}
@@ -387,8 +401,8 @@ export default function App() {
           <UnitsTab 
             units={units} 
             activeSubTab={activeSubTabUnits}
-            onDeleteUnit={handleDeleteUnit}
             onOpenAddModal={() => setIsAddUnitOpen(true)}
+            onSelectUnit={(unit) => setSelectedUnitForDetails(unit)}
           />
         )}
 
@@ -462,6 +476,14 @@ export default function App() {
         isOpen={isAddUnitOpen}
         onClose={() => setIsAddUnitOpen(false)}
         onSave={handleAddUnit}
+      />
+
+      {/* Unit Details Modal */}
+      <UnitDetailsModal 
+        isOpen={!!selectedUnitForDetails}
+        onClose={() => setSelectedUnitForDetails(null)}
+        unit={selectedUnitForDetails}
+        onDelete={handleDeleteUnit}
       />
 
       {/* Add Viewing Modal */}

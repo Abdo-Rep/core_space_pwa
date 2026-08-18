@@ -1,15 +1,17 @@
 import React from 'react';
 
-export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddModal }) {
-  // Filter units by active sub-tab (للبيع | للإيجار)
-  const filteredUnits = units.filter(unit => unit.type === activeSubTab);
+export default function UnitsTab({ units, activeSubTab, onOpenAddModal, onSelectUnit }) {
+  // Filter units by active sub-tab (الكل | للبيع | للإيجار)
+  const filteredUnits = activeSubTab === 'الكل'
+    ? units
+    : units.filter(unit => unit.type === activeSubTab);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header section of tab */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
-          قائمة الوحدات ({activeSubTab === 'للبيع' ? 'المعروضة للبيع' : 'المعروضة للإيجار'})
+          قائمة الوحدات {activeSubTab === 'الكل' ? '(الكل)' : activeSubTab === 'للبيع' ? '(المعروضة للبيع)' : '(المعروضة للإيجار)'}
         </h2>
         <button className="btn btn-primary" onClick={onOpenAddModal} style={{ padding: '6px 12px', fontSize: '12px', flex: 'none' }}>
           + إضافة عقار
@@ -31,7 +33,7 @@ export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddM
             const hasImages = unit.images && unit.images.length > 0;
             
             return (
-              <div key={unit.id} className="card">
+              <div key={unit.id} className="card" onClick={() => onSelectUnit(unit)} style={{ cursor: 'pointer' }}>
                 {/* Media Section: Image thumbnail or Placeholder */}
                 <div className="unit-card-media" style={{ height: '70px' }}>
                   {hasImages ? (
@@ -56,7 +58,7 @@ export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddM
                   )}
                 </div>
 
-                {/* Header with badge, title and delete button */}
+                {/* Header with badge, title */}
                 <div className="card-header-compact" style={{ borderBottom: '1px dashed rgba(255, 255, 255, 0.08)', paddingBottom: '6px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -73,16 +75,6 @@ export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddM
                       {unit.title}
                     </h3>
                   </div>
-
-                  <button 
-                    className="card-btn-delete-icon" 
-                    onClick={() => onDeleteUnit(unit.id)}
-                    title="حذف العقار"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0L9 9m5.71-3 1.34-1.34a1.285 1.285 0 0 0-1.09-2.18H8.82c-.347 0-.673.13-.93.36L6.5 6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </button>
                 </div>
 
                 {/* Details */}
@@ -92,9 +84,7 @@ export default function UnitsTab({ units, activeSubTab, onDeleteUnit, onOpenAddM
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                       </svg>
-                      <a href={`tel:${unit.owner_phone}`} style={{ textDecoration: 'none', color: 'inherit', fontFamily: 'Outfit' }}>
-                        {unit.owner_phone}
-                      </a>
+                      <span>{unit.owner_phone}</span>
                     </div>
                   )}
 
