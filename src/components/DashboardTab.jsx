@@ -386,6 +386,48 @@ export default function DashboardTab({
   const chartData = getChartData();
   const maxChartValue = Math.max(...chartData.map(d => d.value), 1);
 
+  const getSubTitleDateRange = () => {
+    const today = new Date();
+    const options = { day: 'numeric', month: 'long' };
+    
+    if (timeframe === 'today') {
+      return `ليوم ${today.toLocaleDateString('ar-EG', options)}`;
+    }
+    if (timeframe === 'week') {
+      const past = new Date();
+      past.setDate(past.getDate() - 7);
+      return `من ${past.toLocaleDateString('ar-EG', options)} إلى ${today.toLocaleDateString('ar-EG', options)}`;
+    }
+    if (timeframe === 'month') {
+      const past = new Date();
+      past.setDate(past.getDate() - 30);
+      return `من ${past.toLocaleDateString('ar-EG', options)} إلى ${today.toLocaleDateString('ar-EG', options)}`;
+    }
+    if (timeframe === 'custom') {
+      if (endDate) {
+        return `من ${startDate.toLocaleDateString('ar-EG', options)} إلى ${endDate.toLocaleDateString('ar-EG', options)}`;
+      }
+      return `ليوم ${startDate.toLocaleDateString('ar-EG', options)}`;
+    }
+    return '';
+  };
+
+  const getHighestActivityDay = () => {
+    if (!chartData || chartData.length === 0) return null;
+    let maxVal = -1;
+    let maxLabel = null;
+    chartData.forEach(d => {
+      if (d.value > maxVal) {
+        maxVal = d.value;
+        maxLabel = d.label;
+      }
+    });
+    if (maxVal === 0) return null;
+    return maxLabel;
+  };
+
+  const highestDay = getHighestActivityDay();
+
   const formatTimeOnly = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -679,69 +721,113 @@ export default function DashboardTab({
             </div>
           )}
 
-          {/* Interactive Card showing Stats and Graph */}
-          <div className="analytics-card" style={{ gap: '16px' }}>
+          {/* Interactive Card showing Stats and Graph - Replaced with the mockup layout */}
+          <div className="analytics-card" style={{ gap: '20px', padding: '20px' }}>
             
             {/* Header info */}
-            <div className="analytics-card-header">
-              <span className={`analytics-time-badge ${
-                timeframe === 'today' ? 'time-today' : timeframe === 'week' ? 'time-week' : timeframe === 'month' ? 'time-month' : 'time-today'
-              }`} style={{ background: 'rgba(59, 130, 246, 0.08)', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.18)' }}>
-                {timeframe === 'today' && '⚡ نشاط اليوم الحالي'}
-                {timeframe === 'week' && '📅 إجمالي الأسبوع'}
-                {timeframe === 'month' && '📊 إجمالي الشهر الحالي'}
-                {timeframe === 'custom' && (
-                  endDate ? (
-                    `📅 للفترة من ${startDate.toLocaleDateString('ar-EG')} إلى ${endDate.toLocaleDateString('ar-EG')}`
-                  ) : (
-                    `📅 ليوم ${startDate.toLocaleDateString('ar-EG')}`
-                  )
-                )}
-              </span>
-              <span className="analytics-card-trend" style={{ animation: 'none' }}>
-                نمو النشاط
-              </span>
+            <div className="mockup-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div className="mockup-header-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Calendar Icon Badge */}
+                <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '18px', height: '18px' }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                    {timeframe === 'today' && 'إجمالي اليوم'}
+                    {timeframe === 'week' && 'إجمالي الأسبوع'}
+                    {timeframe === 'month' && 'إجمالي الشهر'}
+                    {timeframe === 'custom' && 'إجمالي الفترة المحددة'}
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '800' }}>
+                    {getSubTitleDateRange()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mockup-header-left">
+                <span className="mockup-badge-trend" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  📈 نمو النشاط
+                </span>
+              </div>
             </div>
 
             {/* Counts Row */}
-            <div className="analytics-stats-row" style={{ borderTop: 'none', paddingTop: '0' }}>
-              <div className="analytics-stat-item">
-                <span className="analytics-stat-icon">👥</span>
-                <div className="analytics-stat-details">
-                  <span className="analytics-num">{analytics.clients}</span>
-                  <span className="analytics-label">عملاء جدد</span>
+            <div className="mockup-stats-row" style={{ display: 'flex', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
+              
+              {/* Card 1: Viewings */}
+              <div className="mockup-stat-card" style={{ flex: 1, minWidth: '90px', display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px 14px', background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span className="analytics-num" style={{ fontSize: '20px', fontWeight: '900' }}>{analytics.viewings}</span>
+                  <span className="analytics-label" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>معاينات</span>
+                </div>
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', width: '34px', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(59, 130, 246, 0.15)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '16px', height: '16px' }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
                 </div>
               </div>
-              <div className="analytics-stat-item">
-                <span className="analytics-stat-icon">🏠</span>
-                <div className="analytics-stat-details">
-                  <span className="analytics-num">{analytics.units}</span>
-                  <span className="analytics-label">عقارات مضافة</span>
+
+              {/* Card 2: Units */}
+              <div className="mockup-stat-card" style={{ flex: 1, minWidth: '90px', display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px 14px', background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span className="analytics-num" style={{ fontSize: '20px', fontWeight: '900' }}>{analytics.units}</span>
+                  <span className="analytics-label" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>عقارات مضافة</span>
+                </div>
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', width: '34px', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(16, 185, 129, 0.15)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '16px', height: '16px' }}>
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
                 </div>
               </div>
-              <div className="analytics-stat-item">
-                <span className="analytics-stat-icon">📅</span>
-                <div className="analytics-stat-details">
-                  <span className="analytics-num">{analytics.viewings}</span>
-                  <span className="analytics-label">معاينات</span>
+
+              {/* Card 3: Clients */}
+              <div className="mockup-stat-card" style={{ flex: 1, minWidth: '90px', display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '12px 14px', background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span className="analytics-num" style={{ fontSize: '20px', fontWeight: '900' }}>{analytics.clients}</span>
+                  <span className="analytics-label" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>عملاء جدد</span>
+                </div>
+                <div style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', width: '34px', height: '34px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(168, 85, 247, 0.15)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '16px', height: '16px' }}>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
                 </div>
               </div>
+
             </div>
 
             {/* Visual Growth Bar Chart */}
-            <div className="analytics-chart-container" style={{ marginTop: '4px' }}>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '800', display: 'block', marginBottom: '8px' }}>
-                📈 رسم بياني يوضح معدلات التفاعل
-              </span>
+            <div className="analytics-chart-container" style={{ marginTop: '4px', background: 'var(--card-glass-bg)', border: '1px solid var(--card-glass-border)', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+                {/* Line Chart Icon */}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '12px', height: '12px', color: '#6366f1' }}>
+                  <path d="M3 3v18h18"></path>
+                  <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                </svg>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '800' }}>
+                  رسم بياني يوضح معدلات التفاعل
+                </span>
+              </div>
               
               <div className="bar-chart-wrapper" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: '100px', paddingBottom: '4px' }}>
                 {chartData.map((d, index) => {
-                  const percentage = Math.max((d.value / maxChartValue) * 100, 6); // At least 6% height to show empty bars elegantly
+                  const percentage = Math.max((d.value / maxChartValue) * 100, 6); // At least 6% height to show empty bars
                   return (
                     <div key={index} className="chart-bar-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: '4px' }}>
                       
                       {/* Bar and Tooltip Group */}
-                      <div className="bar-wrapper" style={{ position: 'relative', width: '12px', height: '70px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                      <div className="bar-wrapper" style={{ position: 'relative', width: '16px', height: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                         {/* Tooltip */}
                         <span className="bar-tooltip" style={{ 
                           position: 'absolute', 
@@ -767,18 +853,17 @@ export default function DashboardTab({
                           style={{ 
                             width: '100%', 
                             height: `${percentage}%`, 
-                            background: timeframe === 'today' || timeframe === 'custom' ? 'linear-gradient(to top, #10b981, #34d399)' :
-                                        timeframe === 'week' ? 'linear-gradient(to top, #6366f1, #818cf8)' :
-                                        'linear-gradient(to top, #f59e0b, #fbbf24)',
-                            borderRadius: '6px',
+                            background: 'linear-gradient(to top, #6366f1, #818cf8)',
+                            borderRadius: '20px',
                             transition: 'height 0.5s ease-out-in',
-                            boxShadow: timeframe === 'today' || timeframe === 'custom' ? '0 0 10px rgba(52, 211, 153, 0.3)' :
-                                       timeframe === 'week' ? '0 0 10px rgba(129, 140, 248, 0.3)' :
-                                       '0 0 10px rgba(251, 191, 36, 0.3)',
+                            boxShadow: '0 4px 10px rgba(99, 102, 241, 0.2)',
                             cursor: 'pointer'
                           }}
                         />
                       </div>
+
+                      {/* Small Indicator Under Bar */}
+                      <div style={{ width: '8px', height: '3.5px', borderRadius: '2px', background: 'rgba(99, 102, 241, 0.5)', marginTop: '2px' }} />
 
                       {/* Label */}
                       <span className="bar-label" style={{ fontSize: '9px', fontWeight: '800', color: 'var(--text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -788,6 +873,23 @@ export default function DashboardTab({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Bottom Status Banner */}
+            <div className="mockup-footer-banner" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.06))', border: '1px dashed rgba(99,102,241,0.15)', borderRadius: '12px', padding: '10px 14px', width: '100%' }}>
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: '14px', height: '14px' }}>
+                  <path d="M23 6l-9.5 9.5-5-5L1 18"></path>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: '800' }}>
+                {highestDay ? (
+                  <>أعلى تفاعل كان يوم <strong style={{ color: '#6366f1' }}>{highestDay}</strong>. استمر على نفس الوتيرة! ✨</>
+                ) : (
+                  <>ابدأ في إضافة البيانات وجدولة المعاينات لتتبع نشاطك اليومي! ✨</>
+                )}
+              </span>
             </div>
 
           </div>

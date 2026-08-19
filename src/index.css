@@ -1986,3 +1986,19 @@ body[data-theme="light"] .analytics-stats-row {
   opacity: 1 !important;
   z-index: 10;
 }
+
+/* Mockup Dashboard Styles */
+.mockup-stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.mockup-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md) !important;
+}
+.mockup-badge-trend {
+  font-family: 'Cairo', sans-serif;
+}
+.mockup-footer-banner {
+  font-family: 'Cairo', sans-serif;
+}
+
