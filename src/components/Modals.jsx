@@ -350,6 +350,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
   // Client selection autocomplete
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [clientPhone, setClientPhone] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [filteredClients, setFilteredClients] = useState([]);
   const clientContainerRef = useRef(null);
@@ -452,6 +453,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
   const handleClientSelect = (client) => {
     setSelectedClient(client);
     setClientSearch(client.name);
+    if (client.phone) setClientPhone(client.phone);
     setShowClientDropdown(false);
     if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
   };
@@ -530,7 +532,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
     e.preventDefault();
     const newErrors = {};
     if (!selectedClient && !clientSearch.trim()) newErrors.client = 'يرجى اختيار أو كتابة اسم العميل';
-    if (!selectedUnit) newErrors.unit = 'يرجى اختيار وحدة عقارية من القائمة';
+    if (!selectedUnit && !unitSearch.trim()) newErrors.unit = 'يرجى اختيار أو كتابة العقار المعني بالمعاينة';
     
     const combinedISO = getCombinedDateTimeISO();
     if (!combinedISO) newErrors.time = 'يرجى تحديد تاريخ المعاينة';
@@ -543,16 +545,20 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
     onSave({
       client_id: selectedClient ? selectedClient.id : 'custom_' + Date.now(),
       client_name: selectedClient ? selectedClient.name : clientSearch.trim(),
-      unit_id: selectedUnit.id,
-      unit_title: selectedUnit.title,
+      client_phone: clientPhone.trim(),
+      unit_id: selectedUnit ? selectedUnit.id : 'custom_' + Date.now(),
+      unit_title: selectedUnit ? selectedUnit.title : unitSearch.trim(),
       viewing_time: combinedISO,
       notes
     });
     
     handleClose();
-  };  const handleClose = () => {
+  };
+
+  const handleClose = () => {
     setClientSearch('');
     setSelectedClient(null);
+    setClientPhone('');
     setShowClientDropdown(false);
     setUnitSearch('');
     setSelectedUnit(null);
@@ -673,6 +679,18 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                 <span>العميل المكتوب (غير مسجل): <strong>{clientSearch.trim()}</strong></span>
               </div>
             )}
+          </div>
+
+          {/* Optional Client Phone Field */}
+          <div className="form-group">
+            <label className="form-label">رقم هاتف العميل (اختياري)</label>
+            <input 
+              type="tel" 
+              className="form-input" 
+              placeholder="أدخل رقم هاتف للتواصل مع هذا العميل..." 
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value)}
+            />
           </div>
 
           {/* Unit Search Autocomplete */}
