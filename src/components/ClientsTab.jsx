@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOpenAddModal, onOpenSmartMatch }) {
+export default function ClientsTab({ clients, activeSubTab, onOpenAddModal, onOpenSmartMatch, onSelectClient }) {
   // Filter clients by active sub-tab (الكل | شراء | إيجار)
   const filteredClients = activeSubTab === 'الكل' 
     ? clients 
@@ -30,7 +30,7 @@ export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOp
       ) : (
         <div className="cards-grid">
           {filteredClients.map(client => (
-            <div key={client.id} className="card" style={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center', padding: '8px 12px' }}>
+            <div key={client.id} className="card" onClick={() => onSelectClient(client)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center', padding: '8px 12px' }}>
               {/* Client Info (Right/Center side in RTL) */}
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -48,7 +48,7 @@ export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOp
                 </div>
                 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
-                  <a href={`tel:${client.phone}`} style={{ textDecoration: 'none', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'Outfit' }}>
+                  <a href={`tel:${client.phone}`} onClick={e => e.stopPropagation()} style={{ textDecoration: 'none', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'Outfit' }}>
                     📞 {client.phone}
                   </a>
                   {client.budget && (
@@ -70,7 +70,7 @@ export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOp
                 {/* Smart Match Icon Button */}
                 <button 
                   className="smart-match-badge-btn-compact" 
-                  onClick={() => onOpenSmartMatch(client)}
+                  onClick={(e) => { e.stopPropagation(); onOpenSmartMatch(client); }}
                   style={{ margin: 0, padding: '4px 6px', borderRadius: '5px', fontSize: '10px' }}
                   title="مطابقة ذكية"
                 >
@@ -78,18 +78,6 @@ export default function ClientsTab({ clients, activeSubTab, onDeleteClient, onOp
                     <path d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-2.625 6c0-.414.336-.75.75-.75h3.75c.414 0 .75.336.75.75v3.75c0 .414-.336.75-.75.75h-3.75a.75.75 0 0 1-.75-.75V8.25Z" />
                   </svg>
                   <span style={{ marginRight: '2px' }}>مطابقة</span>
-                </button>
-
-                {/* Delete Button */}
-                <button 
-                  className="card-btn-delete-icon" 
-                  onClick={() => onDeleteClient(client.id)}
-                  title="حذف العميل"
-                  style={{ width: '22px', height: '22px', borderRadius: '5px' }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: '11px', height: '11px' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9m-4.72 0L9 9m5.71-3 1.34-1.34a1.285 1.285 0 0 0-1.09-2.18H8.82c-.347 0-.673.13-.93.36L6.5 6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
                 </button>
               </div>
             </div>

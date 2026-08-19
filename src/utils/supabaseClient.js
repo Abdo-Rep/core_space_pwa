@@ -102,6 +102,29 @@ export const dbDeleteClient = async (id, currentClients) => {
   }
 };
 
+export const dbUpdateClient = async (id, updatedFields) => {
+  const local = JSON.parse(localStorage.getItem('cs_clients') || '[]');
+  const updatedLocal = local.map(c => c.id === id ? { ...c, ...updatedFields } : c);
+  localStorage.setItem('cs_clients', JSON.stringify(updatedLocal));
+
+  if (id && id.toString().startsWith('local_')) {
+    return { success: true, isLocal: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('clients')
+      .update(updatedFields)
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true, isLocal: false };
+  } catch (err) {
+    console.warn('Supabase update failed, saved to localStorage only:', err.message);
+    return { success: true, isLocal: true, error: err.message || String(err) };
+  }
+};
+
 /**
  * UNITS OPERATIONS
  */
@@ -191,6 +214,29 @@ export const dbDeleteUnit = async (id, currentUnits) => {
   } catch (err) {
     console.warn('Supabase delete failed, updated local cache only:', err.message);
     return { success: true, isLocal: true };
+  }
+};
+
+export const dbUpdateUnit = async (id, updatedFields) => {
+  const local = JSON.parse(localStorage.getItem('cs_units') || '[]');
+  const updatedLocal = local.map(u => u.id === id ? { ...u, ...updatedFields } : u);
+  localStorage.setItem('cs_units', JSON.stringify(updatedLocal));
+
+  if (id && id.toString().startsWith('local_')) {
+    return { success: true, isLocal: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('units')
+      .update(updatedFields)
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true, isLocal: false };
+  } catch (err) {
+    console.warn('Supabase update failed, saved to localStorage only:', err.message);
+    return { success: true, isLocal: true, error: err.message || String(err) };
   }
 };
 

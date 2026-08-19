@@ -10,11 +10,12 @@ import {
   AddClientModal, 
   AddUnitModal, 
   AddViewingModal,
-  UnitDetailsModal
+  UnitDetailsModal,
+  ClientDetailsModal
 } from './components/Modals';
 import { 
-  dbGetClients, dbAddClient, dbDeleteClient,
-  dbGetUnits, dbAddUnit, dbDeleteUnit,
+  dbGetClients, dbAddClient, dbDeleteClient, dbUpdateClient,
+  dbGetUnits, dbAddUnit, dbDeleteUnit, dbUpdateUnit,
   dbGetViewings, dbAddViewing, dbDeleteViewing,
   syncOfflineData
 } from './utils/supabaseClient';
@@ -25,6 +26,7 @@ export default function App() {
   const [activeSubTabClients, setActiveSubTabClients] = useState('الكل'); // الكل | شراء | إيجار
   const [activeSubTabUnits, setActiveSubTabUnits] = useState('الكل'); // الكل | للبيع | للإيجار
   const [selectedUnitForDetails, setSelectedUnitForDetails] = useState(null);
+  const [selectedClientForDetails, setSelectedClientForDetails] = useState(null);
 
   // Theme State (Dark/Light Mode)
   const [theme, setTheme] = useState(() => {
@@ -194,6 +196,29 @@ export default function App() {
     });
   };
 
+  const handleUpdateClient = async (id, updatedFields) => {
+    setClients(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
+    
+    if (updatedFields.name) {
+      setViewings(prev => prev.map(v => v.client_id === id ? { ...v, client_name: updatedFields.name } : v));
+      const localViewings = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+      const updatedLocalViewings = localViewings.map(v => v.client_id === id ? { ...v, client_name: updatedFields.name } : v);
+      localStorage.setItem('cs_viewings', JSON.stringify(updatedLocalViewings));
+    }
+
+    triggerAlert('جاري تحديث العميل... ⏳');
+
+    dbUpdateClient(id, updatedFields).then(res => {
+      if (res.success && !res.isLocal) {
+        triggerAlert('تم تحديث وتعديل العميل بنجاح ✅');
+      } else {
+        triggerAlert('تم تحديث العميل محلياً (سيتم المزامنة لاحقاً)');
+      }
+    }).catch(err => {
+      console.error('Background update client error:', err);
+    });
+  };
+
   // ----------------------------------------------------
   // UNITS ACTIONS
   // ----------------------------------------------------
@@ -251,6 +276,29 @@ export default function App() {
       }
     }).catch(err => {
       console.error('Background delete unit error:', err);
+    });
+  };
+
+  const handleUpdateUnit = async (id, updatedFields) => {
+    setUnits(prev => prev.map(u => u.id === id ? { ...u, ...updatedFields } : u));
+    
+    if (updatedFields.title) {
+      setViewings(prev => prev.map(v => v.unit_id === id ? { ...v, unit_title: updatedFields.title } : v));
+      const localViewings = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
+      const updatedLocalViewings = localViewings.map(v => v.unit_id === id ? { ...v, unit_title: updatedFields.title } : v);
+      localStorage.setItem('cs_viewings', JSON.stringify(updatedLocalViewings));
+    }
+
+    triggerAlert('جاري تحديث العقار... ⏳');
+
+    dbUpdateUnit(id, updatedFields).then(res => {
+      if (res.success && !res.isLocal) {
+        triggerAlert('تم تحديث وتعديل العقار بنجاح ✅');
+      } else {
+        triggerAlert('تم تحديث العقار محلياً (سيتم المزامنة لاحقاً)');
+      }
+    }).catch(err => {
+      console.error('Background update unit error:', err);
     });
   };
 
@@ -396,9 +444,9 @@ export default function App() {
           <ClientsTab 
             clients={clients} 
             activeSubTab={activeSubTabClients}
-            onDeleteClient={handleDeleteClient}
             onOpenAddModal={() => setIsAddClientOpen(true)}
             onOpenSmartMatch={(client) => setSelectedClientForMatch(client)}
+            onSelectClient={(client) => setSelectedClientForDetails(client)}
           />
         )}
 
@@ -490,7 +538,17 @@ export default function App() {
         onClose={() => setSelectedUnitForDetails(null)}
         unit={selectedUnitForDetails}
         onDelete={handleDeleteUnit}
+        onUpdate={handleUpdateUnit}
         viewings={viewings}
+      />
+
+      {/* Client Details Modal */}
+      <ClientDetailsModal 
+        isOpen={!!selectedClientForDetails}
+        onClose={() => setSelectedClientForDetails(null)}
+        client={selectedClientForDetails}
+        onDelete={handleDeleteClient}
+        onUpdate={handleUpdateClient}
       />
 
       {/* Add Viewing Modal */}

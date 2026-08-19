@@ -352,12 +352,44 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
   const [selectedClient, setSelectedClient] = useState(null);
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [filteredClients, setFilteredClients] = useState([]);
+  const clientContainerRef = useRef(null);
 
   // Unit selection autocomplete
   const [unitSearch, setUnitSearch] = useState('');
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
   const [filteredUnits, setFilteredUnits] = useState([]);
+  const unitContainerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clientContainerRef.current && !clientContainerRef.current.contains(event.target)) {
+        setShowClientDropdown(false);
+      }
+      if (unitContainerRef.current && !unitContainerRef.current.contains(event.target)) {
+        setShowUnitDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleClientDropdown = (e) => {
+    e.stopPropagation();
+    if (!showClientDropdown) {
+      setFilteredClients(clients);
+    }
+    setShowClientDropdown(prev => !prev);
+  };
+
+  const toggleUnitDropdown = (e) => {
+    e.stopPropagation();
+    if (!showUnitDropdown) {
+      setFilteredUnits(units);
+    }
+    setShowUnitDropdown(prev => !prev);
+  };
 
   // Custom Calendar & Time Picker States
   const now = new Date();
@@ -581,7 +613,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Client Search Autocomplete */}
-          <div className="form-group autocomplete-container">
+          <div className="form-group autocomplete-container" ref={clientContainerRef}>
             <label className="form-label">اختر العميل *</label>
             <div style={{ position: 'relative' }}>
               <input 
@@ -596,13 +628,11 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                   if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
                 }}
                 onFocus={() => setShowClientDropdown(true)}
-                onBlur={() => setTimeout(() => setShowClientDropdown(false), 250)}
                 style={{ paddingLeft: '35px' }}
               />
               <button 
                 type="button" 
-                onClick={() => setShowClientDropdown(prev => !prev)}
-                onMouseDown={(e) => e.preventDefault()}
+                onClick={toggleClientDropdown}
                 style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', fontSize: '10px' }}
               >
                 ▼
@@ -614,14 +644,14 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
               <div className="autocomplete-dropdown">
                 {filteredClients.length === 0 ? (
                   <div className="autocomplete-item" style={{ color: 'var(--text-muted)', cursor: 'default' }}>
-                    لا يوجد عملاء مطابين للبحث (اكتب الاسم مباشرة إذا كان غير مسجل)
+                    لا يوجد عملاء مطابقين للبحث (اكتب الاسم مباشرة إذا كان غير مسجل)
                   </div>
                 ) : (
                   filteredClients.map(c => (
                     <div 
                       key={c.id} 
                       className="autocomplete-item"
-                      onMouseDown={() => handleClientSelect(c)} // use onMouseDown to fire before onBlur
+                      onClick={() => handleClientSelect(c)}
                     >
                       {c.name} ({c.phone}) - {c.type}
                     </div>
@@ -646,7 +676,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
           </div>
 
           {/* Unit Search Autocomplete */}
-          <div className="form-group autocomplete-container">
+          <div className="form-group autocomplete-container" ref={unitContainerRef}>
             <label className="form-label">اختر العقار المعني بالمعاينة *</label>
             <div style={{ position: 'relative' }}>
               <input 
@@ -661,13 +691,11 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                   if (errors.unit) setErrors(prev => ({ ...prev, unit: '' }));
                 }}
                 onFocus={() => setShowUnitDropdown(true)}
-                onBlur={() => setTimeout(() => setShowUnitDropdown(false), 250)}
                 style={{ paddingLeft: '35px' }}
               />
               <button 
                 type="button" 
-                onClick={() => setShowUnitDropdown(prev => !prev)}
-                onMouseDown={(e) => e.preventDefault()}
+                onClick={toggleUnitDropdown}
                 style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', fontSize: '10px' }}
               >
                 ▼
@@ -686,7 +714,7 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                     <div 
                       key={u.id} 
                       className="autocomplete-item"
-                      onMouseDown={() => handleUnitSelect(u)} // use onMouseDown to fire before onBlur
+                      onClick={() => handleUnitSelect(u)}
                     >
                       {u.title} ({u.type}) - {u.price || 'بدون سعر'}
                     </div>
@@ -838,14 +866,29 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
 /**
  * 4. UnitDetailsModal Component
  */
-export function UnitDetailsModal({ isOpen, onClose, unit, onDelete, viewings = [] }) {
+export function UnitDetailsModal({ isOpen, onClose, unit, onDelete, onUpdate, viewings = [] }) {
   if (!isOpen || !unit) return null;
 
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  const hasImages = unit.images && unit.images.length > 0;
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(unit.title);
+  const [price, setPrice] = useState(unit.price || '');
+  const [ownerPhone, setOwnerPhone] = useState(unit.owner_phone || '');
+  const [notes, setNotes] = useState(unit.notes || '');
+  const [type, setType] = useState(unit.type);
+
+  useEffect(() => {
+    setTitle(unit.title);
+    setPrice(unit.price || '');
+    setOwnerPhone(unit.owner_phone || '');
+    setNotes(unit.notes || '');
+    setType(unit.type);
+    setIsEditing(false);
+    setActiveImgIdx(0);
+  }, [unit]);
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -876,15 +919,31 @@ export function UnitDetailsModal({ isOpen, onClose, unit, onDelete, viewings = [
     touchEndX.current = 0;
   };
 
+  const handleSaveEdit = () => {
+    if (!title.trim()) {
+      alert('يرجى إدخال عنوان أو وصف العقار');
+      return;
+    }
+    onUpdate(unit.id, {
+      title,
+      price,
+      owner_phone: ownerPhone,
+      notes,
+      type
+    });
+    setIsEditing(false);
+  };
+
   const unitViewingsCount = viewings.filter(v => v.unit_id === unit.id).length;
+  const hasImages = unit.images && unit.images.length > 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
         <div className="modal-header">
           <h3 className="modal-title" style={{ flex: 1 }}>تفاصيل العقار</h3>
-          <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`} style={{ alignSelf: 'center', marginLeft: '12px' }}>
-            {unit.type}
+          <span className={`card-badge ${type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`} style={{ alignSelf: 'center', marginLeft: '12px' }}>
+            {type}
           </span>
           <button className="modal-close-btn" onClick={onClose}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
@@ -894,151 +953,385 @@ export function UnitDetailsModal({ isOpen, onClose, unit, onDelete, viewings = [
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
-          {/* Images Grid or Carousel */}
-          {hasImages ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div 
-                className="unit-card-media" 
-                style={{ height: '200px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                <img 
-                  src={unit.images[activeImgIdx]} 
-                  alt={unit.title} 
-                  className="unit-thumbnail" 
-                  style={{ height: '200px', objectFit: 'cover', width: '100%', userSelect: 'none' }}
-                />
+          {isEditing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label">العنوان / الوصف المختصر *</label>
+                <input className="form-input" value={title} onChange={e => setTitle(e.target.value)} />
+              </div>
+              
+              <div className="form-group">
+                <span className="form-label">نوع المعاملة</span>
+                <div className="toggle-pill-container" style={{ padding: '2px', borderRadius: '8px' }}>
+                  <div 
+                    className={`toggle-pill-option ${type === 'للبيع' ? 'selected' : ''}`}
+                    onClick={() => setType('للبيع')}
+                  >
+                    للبيع
+                  </div>
+                  <div 
+                    className={`toggle-pill-option ${type === 'للإيجار' ? 'selected' : ''}`}
+                    onClick={() => setType('للإيجار')}
+                  >
+                    للإيجار
+                  </div>
+                </div>
+              </div>
 
-                {/* Arrow overlays */}
-                {unit.images.length > 1 && (
-                  <>
-                    {activeImgIdx > 0 && (
-                      <button 
-                        type="button"
-                        onClick={() => setActiveImgIdx(prev => prev - 1)}
-                        style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
-                      >
-                        ❯
-                      </button>
-                    )}
-                    {activeImgIdx < unit.images.length - 1 && (
-                      <button 
-                        type="button"
-                        onClick={() => setActiveImgIdx(prev => prev + 1)}
-                        style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
-                      >
-                        ❮
-                      </button>
-                    )}
+              <div className="form-group">
+                <label className="form-label">السعر / الإيجار</label>
+                <input className="form-input" value={price} onChange={e => setPrice(e.target.value)} />
+              </div>
 
-                    {/* Dots indicators */}
-                    <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '10px', zIndex: 2 }}>
-                      {unit.images.map((_, idx) => (
-                        <span 
+              <div className="form-group">
+                <label className="form-label">رقم هاتف المالك</label>
+                <input className="form-input" value={ownerPhone} onChange={e => setOwnerPhone(e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">ملاحظات العقار</label>
+                <textarea className="form-input" rows={3} value={notes} onChange={e => setNotes(e.target.value)} style={{ resize: 'none' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-primary" onClick={handleSaveEdit}>حفظ التعديلات ✅</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>إلغاء</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Images Grid or Carousel */}
+              {hasImages ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div 
+                    className="unit-card-media" 
+                    style={{ height: '200px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <img 
+                      src={unit.images[activeImgIdx]} 
+                      alt={unit.title} 
+                      className="unit-thumbnail" 
+                      style={{ height: '200px', objectFit: 'cover', width: '100%', userSelect: 'none' }}
+                    />
+
+                    {/* Arrow overlays */}
+                    {unit.images.length > 1 && (
+                      <>
+                        {activeImgIdx > 0 && (
+                          <button 
+                            type="button"
+                            onClick={() => setActiveImgIdx(prev => prev - 1)}
+                            style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+                          >
+                            ❯
+                          </button>
+                        )}
+                        {activeImgIdx < unit.images.length - 1 && (
+                          <button 
+                            type="button"
+                            onClick={() => setActiveImgIdx(prev => prev + 1)}
+                            style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+                          >
+                            ❮
+                          </button>
+                        )}
+
+                        {/* Dots indicators */}
+                        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '10px', zIndex: 2 }}>
+                          {unit.images.map((_, idx) => (
+                            <span 
+                              key={idx} 
+                              onClick={() => setActiveImgIdx(idx)}
+                              style={{ width: '6px', height: '6px', borderRadius: '50%', background: idx === activeImgIdx ? 'var(--secondary-color)' : 'rgba(255,255,255,0.5)', display: 'block', cursor: 'pointer' }}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {unit.images.length > 1 && (
+                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                      {unit.images.map((img, idx) => (
+                        <img 
                           key={idx} 
+                          src={img} 
+                          alt={`detail-${idx}`} 
                           onClick={() => setActiveImgIdx(idx)}
-                          style={{ width: '6px', height: '6px', borderRadius: '50%', background: idx === activeImgIdx ? 'var(--secondary-color)' : 'rgba(255,255,255,0.5)', display: 'block', cursor: 'pointer' }}
+                          style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: idx === activeImgIdx ? '2px solid var(--secondary-color)' : '1px solid var(--card-glass-border)', cursor: 'pointer', opacity: idx === activeImgIdx ? 1 : 0.6 }} 
                         />
                       ))}
                     </div>
-                  </>
-                )}
-              </div>
-              {unit.images.length > 1 && (
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                  {unit.images.map((img, idx) => (
-                    <img 
-                      key={idx} 
-                      src={img} 
-                      alt={`detail-${idx}`} 
-                      onClick={() => setActiveImgIdx(idx)}
-                      style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: idx === activeImgIdx ? '2px solid var(--secondary-color)' : '1px solid var(--card-glass-border)', cursor: 'pointer', opacity: idx === activeImgIdx ? 1 : 0.6 }} 
-                    />
-                  ))}
+                  )}
+                </div>
+              ) : (
+                <div className="unit-card-media" style={{ height: '120px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <div className="unit-image-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '32px', height: '32px' }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h18v18H3V3z" />
+                    </svg>
+                    <span style={{ fontSize: '11px', marginTop: '4px' }}>لا يوجد صور</span>
+                  </div>
                 </div>
               )}
+
+              {/* Title */}
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{unit.title}</h4>
+              </div>
+
+              {/* Details list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-glass-border)' }}>
+                {unit.owner_phone && (
+                  <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                    <span>المالك: <strong>
+                      <a href={`tel:${unit.owner_phone}`} style={{ textDecoration: 'none', color: 'var(--secondary-color)', fontFamily: 'Outfit' }}>
+                        {unit.owner_phone}
+                      </a>
+                    </strong></span>
+                  </div>
+                )}
+
+                {unit.price && (
+                  <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    <span>السعر: <strong className="price-tag" style={{ fontSize: '14px' }}>{unit.price}</strong></span>
+                  </div>
+                )}
+
+                <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                  </svg>
+                  <span>عدد المعاينات المجدولة: <strong style={{ color: 'var(--secondary-color)', fontSize: '14px' }}>{unitViewingsCount}</strong></span>
+                </div>
+
+                {unit.id && unit.id.toString().startsWith('local_') && (
+                  <div className="card-detail-item" style={{ fontSize: '13px', color: '#fbbf24' }}>
+                    ⏳ جاري المزامنة مع السيرفر السحابي...
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              {unit.notes && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span className="form-label">ملاحظات العقار</span>
+                  <div className="card-notes" style={{ fontSize: '12px', padding: '10px 12px', borderRightWidth: '4px' }}>
+                    {unit.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ color: 'var(--color-error)', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', fontSize: '12px', padding: '8px 16px' }}
+                  onClick={() => {
+                    if (window.confirm('هل أنت متأكد من حذف هذا العقار؟ سيتم حذف معايناته المرتبطة تلقائياً.')) {
+                      onDelete(unit.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  حذف العقار 🗑️
+                </button>
+
+                <button 
+                  className="btn btn-primary" 
+                  style={{ fontSize: '12px', padding: '8px 16px' }}
+                  onClick={() => setIsEditing(true)}
+                >
+                  تعديل البيانات 📝
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 5. ClientDetailsModal Component
+ */
+export function ClientDetailsModal({ isOpen, onClose, client, onDelete, onUpdate }) {
+  if (!isOpen || !client) return null;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(client.name);
+  const [phone, setPhone] = useState(client.phone);
+  const [type, setType] = useState(client.type);
+  const [budget, setBudget] = useState(client.budget || '');
+  const [notes, setNotes] = useState(client.notes || '');
+
+  useEffect(() => {
+    setName(client.name);
+    setPhone(client.phone);
+    setType(client.type);
+    setBudget(client.budget || '');
+    setNotes(client.notes || '');
+    setIsEditing(false);
+  }, [client]);
+
+  const handleSaveEdit = () => {
+    if (!name.trim() || !phone.trim()) {
+      alert('يرجى إدخال الاسم ورقم الهاتف');
+      return;
+    }
+    onUpdate(client.id, {
+      name,
+      phone,
+      type,
+      budget,
+      notes
+    });
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-header">
+          <h3 className="modal-title" style={{ flex: 1 }}>تفاصيل العميل</h3>
+          <span className={`card-badge ${type === 'شراء' ? 'badge-buy' : 'badge-rent'}`} style={{ alignSelf: 'center', marginLeft: '12px' }}>
+            {type}
+          </span>
+          <button className="modal-close-btn" onClick={onClose}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: '20px', height: '20px' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
+          {isEditing ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label">الاسم الكامل *</label>
+                <input className="form-input" value={name} onChange={e => setName(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">رقم الهاتف *</label>
+                <input className="form-input" value={phone} onChange={e => setPhone(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <span className="form-label">نوع الطلب</span>
+                <div className="toggle-pill-container" style={{ padding: '2px', borderRadius: '8px' }}>
+                  <div 
+                    className={`toggle-pill-option ${type === 'شراء' ? 'selected' : ''}`}
+                    onClick={() => setType('شراء')}
+                  >
+                    شراء
+                  </div>
+                  <div 
+                    className={`toggle-pill-option ${type === 'إيجار' ? 'selected' : ''}`}
+                    onClick={() => setType('إيجار')}
+                  >
+                    إيجار
+                  </div>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">الميزانية / السعر</label>
+                <input className="form-input" value={budget} onChange={e => setBudget(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">ملاحظات الطلب</label>
+                <textarea className="form-input" rows={3} value={notes} onChange={e => setNotes(e.target.value)} style={{ resize: 'none' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <button type="button" className="btn btn-primary" onClick={handleSaveEdit}>حفظ التعديلات ✅</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>إلغاء</button>
+              </div>
             </div>
           ) : (
-            <div className="unit-card-media" style={{ height: '120px', borderRadius: '12px', overflow: 'hidden' }}>
-              <div className="unit-image-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '32px', height: '32px' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h18v18H3V3z" />
-                </svg>
-                <span style={{ fontSize: '11px', marginTop: '4px' }}>لا يوجد صور</span>
+            <>
+              {/* Profile Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-glass-border)' }}>
+                <div style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                  👤
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: '900', color: 'var(--text-primary)' }}>{client.name}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>رقم المعرّف: {client.id.toString().substring(0, 13)}...</span>
+                </div>
               </div>
-            </div>
+
+              {/* Details list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-glass-border)' }}>
+                <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5" />
+                  </svg>
+                  <span>الهاتف: <strong>
+                    <a href={`tel:${client.phone}`} style={{ textDecoration: 'none', color: 'var(--secondary-color)', fontFamily: 'Outfit' }}>
+                      {client.phone}
+                    </a>
+                  </strong></span>
+                </div>
+
+                {client.budget && (
+                  <div className="card-detail-item" style={{ fontSize: '13px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12" />
+                    </svg>
+                    <span>الميزانية: <strong className="price-tag" style={{ fontSize: '14px' }}>{client.budget}</strong></span>
+                  </div>
+                )}
+
+                {client.id && client.id.toString().startsWith('local_') && (
+                  <div className="card-detail-item" style={{ fontSize: '13px', color: '#fbbf24' }}>
+                    ⏳ جاري المزامنة مع السيرفر السحابي...
+                  </div>
+                )}
+              </div>
+
+              {/* Notes */}
+              {client.notes && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span className="form-label">ملاحظات الطلب</span>
+                  <div className="card-notes" style={{ fontSize: '12px', padding: '10px 12px', borderRightWidth: '4px' }}>
+                    {client.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ color: 'var(--color-error)', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', fontSize: '12px', padding: '8px 16px' }}
+                  onClick={() => {
+                    if (window.confirm('هل أنت متأكد من حذف هذا العميل؟ سيتم حذف جميع معايناته تلقائياً.')) {
+                      onDelete(client.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  حذف العميل 🗑️
+                </button>
+
+                <button 
+                  className="btn btn-primary" 
+                  style={{ fontSize: '12px', padding: '8px 16px' }}
+                  onClick={() => setIsEditing(true)}
+                >
+                  تعديل البيانات 📝
+                </button>
+              </div>
+            </>
           )}
-
-          {/* Title */}
-          <div>
-            <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{unit.title}</h4>
-          </div>
-
-          {/* Details list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--card-glass-border)' }}>
-            {unit.owner_phone && (
-              <div className="card-detail-item" style={{ fontSize: '13px' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                </svg>
-                <span>المالك: <strong>
-                  <a href={`tel:${unit.owner_phone}`} style={{ textDecoration: 'none', color: 'var(--secondary-color)', fontFamily: 'Outfit' }}>
-                    {unit.owner_phone}
-                  </a>
-                </strong></span>
-              </div>
-            )}
-
-            {unit.price && (
-              <div className="card-detail-item" style={{ fontSize: '13px' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-                <span>السعر: <strong className="price-tag" style={{ fontSize: '14px' }}>{unit.price}</strong></span>
-              </div>
-            )}
-
-            <div className="card-detail-item" style={{ fontSize: '13px' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-              </svg>
-              <span>عدد المعاينات المجدولة: <strong style={{ color: 'var(--secondary-color)', fontSize: '14px' }}>{unitViewingsCount}</strong></span>
-            </div>
-
-            {unit.id && unit.id.toString().startsWith('local_') && (
-              <div className="card-detail-item" style={{ fontSize: '13px', color: '#fbbf24' }}>
-                ⏳ جاري المزامنة مع السيرفر السحابي...
-              </div>
-            )}
-          </div>
-
-          {/* Notes */}
-          {unit.notes && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span className="form-label">ملاحظات العقار</span>
-              <div className="card-notes" style={{ fontSize: '12px', padding: '10px 12px', borderRightWidth: '4px' }}>
-                {unit.notes}
-              </div>
-            </div>
-          )}
-
-          {/* Delete action in details modal */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.08)', paddingTop: '12px' }}>
-            <button 
-              className="btn btn-secondary" 
-              style={{ color: 'var(--color-error)', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', fontSize: '12px', padding: '8px 16px' }}
-              onClick={() => {
-                if (window.confirm('هل أنت متأكد من حذف هذا العقار؟')) {
-                  onDelete(unit.id);
-                  onClose();
-                }
-              }}
-            >
-              حذف العقار 🗑️
-            </button>
-          </div>
         </div>
       </div>
     </div>
