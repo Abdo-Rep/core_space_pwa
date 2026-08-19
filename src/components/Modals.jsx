@@ -583,20 +583,31 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
           {/* Client Search Autocomplete */}
           <div className="form-group autocomplete-container">
             <label className="form-label">اختر العميل *</label>
-            <input 
-              type="text" 
-              className={`form-input ${errors.client ? 'input-error' : ''}`} 
-              placeholder="ابحث باسم العميل أو رقم هاتفه، أو اكتب اسماً جديداً..." 
-              value={clientSearch}
-              onChange={(e) => {
-                setClientSearch(e.target.value);
-                setSelectedClient(null); // Clear selection if typing manually
-                setShowClientDropdown(true);
-                if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
-              }}
-              onFocus={() => setShowClientDropdown(true)}
-              onBlur={() => setTimeout(() => setShowClientDropdown(false), 250)}
-            />
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="text" 
+                className={`form-input ${errors.client ? 'input-error' : ''}`} 
+                placeholder="ابحث باسم العميل أو رقم هاتفه، أو اكتب اسماً جديداً..." 
+                value={clientSearch}
+                onChange={(e) => {
+                  setClientSearch(e.target.value);
+                  setSelectedClient(null); // Clear selection if typing manually
+                  setShowClientDropdown(true);
+                  if (errors.client) setErrors(prev => ({ ...prev, client: '' }));
+                }}
+                onFocus={() => setShowClientDropdown(true)}
+                onBlur={() => setTimeout(() => setShowClientDropdown(false), 250)}
+                style={{ paddingLeft: '35px' }}
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowClientDropdown(prev => !prev)}
+                onMouseDown={(e) => e.preventDefault()}
+                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', fontSize: '10px' }}
+              >
+                ▼
+              </button>
+            </div>
             {errors.client && <span className="form-error">{errors.client}</span>}
             
             {showClientDropdown && (
@@ -637,25 +648,38 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
           {/* Unit Search Autocomplete */}
           <div className="form-group autocomplete-container">
             <label className="form-label">اختر العقار المعني بالمعاينة *</label>
-            <input 
-              type="text" 
-              className={`form-input ${errors.unit ? 'input-error' : ''}`} 
-              placeholder="ابحث بوصف أو عنوان العقار، أو اضغط للعرض..." 
-              value={unitSearch}
-              onChange={(e) => {
-                setUnitSearch(e.target.value);
-                setShowUnitDropdown(true);
-              }}
-              onFocus={() => setShowUnitDropdown(true)}
-              onBlur={() => setTimeout(() => setShowUnitDropdown(false), 250)}
-            />
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="text" 
+                className={`form-input ${errors.unit ? 'input-error' : ''}`} 
+                placeholder="ابحث بوصف أو عنوان العقار، أو اكتب وصفاً جديداً..." 
+                value={unitSearch}
+                onChange={(e) => {
+                  setUnitSearch(e.target.value);
+                  setSelectedUnit(null); // Clear selection if typing manually
+                  setShowUnitDropdown(true);
+                  if (errors.unit) setErrors(prev => ({ ...prev, unit: '' }));
+                }}
+                onFocus={() => setShowUnitDropdown(true)}
+                onBlur={() => setTimeout(() => setShowUnitDropdown(false), 250)}
+                style={{ paddingLeft: '35px' }}
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowUnitDropdown(prev => !prev)}
+                onMouseDown={(e) => e.preventDefault()}
+                style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', fontSize: '10px' }}
+              >
+                ▼
+              </button>
+            </div>
             {errors.unit && <span className="form-error">{errors.unit}</span>}
             
             {showUnitDropdown && (
               <div className="autocomplete-dropdown">
                 {filteredUnits.length === 0 ? (
                   <div className="autocomplete-item" style={{ color: 'var(--text-muted)', cursor: 'default' }}>
-                    لا يوجد عقارات مطابقة للبحث
+                    لا يوجد عقارات مطابقة للبحث (اكتب وصف العقار مباشرة إذا كان غير مسجل)
                   </div>
                 ) : (
                   filteredUnits.map(u => (
@@ -677,6 +701,11 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
                 <span>العقار المختار: <strong>{selectedUnit.title} ({selectedUnit.type})</strong></span>
+              </div>
+            )}
+            {!selectedUnit && unitSearch.trim() && (
+              <div className="selected-badge-info" style={{ background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+                <span>العقار المكتوب (غير مسجل): <strong>{unitSearch.trim()}</strong></span>
               </div>
             )}
           </div>
@@ -809,10 +838,45 @@ export function AddViewingModal({ isOpen, onClose, onSave, clients = [], units =
 /**
  * 4. UnitDetailsModal Component
  */
-export function UnitDetailsModal({ isOpen, onClose, unit, onDelete }) {
+export function UnitDetailsModal({ isOpen, onClose, unit, onDelete, viewings = [] }) {
   if (!isOpen || !unit) return null;
 
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
   const hasImages = unit.images && unit.images.length > 0;
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+
+    // Swipe left (next image)
+    if (diff > 50) {
+      if (activeImgIdx < unit.images.length - 1) {
+        setActiveImgIdx(prev => prev + 1);
+      }
+    }
+    // Swipe right (prev image)
+    if (diff < -50) {
+      if (activeImgIdx > 0) {
+        setActiveImgIdx(prev => prev - 1);
+      }
+    }
+
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  const unitViewingsCount = viewings.filter(v => v.unit_id === unit.id).length;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -833,13 +897,54 @@ export function UnitDetailsModal({ isOpen, onClose, unit, onDelete }) {
           {/* Images Grid or Carousel */}
           {hasImages ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div className="unit-card-media" style={{ height: '200px', borderRadius: '12px', overflow: 'hidden' }}>
+              <div 
+                className="unit-card-media" 
+                style={{ height: '200px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <img 
-                  src={unit.images[0]} 
+                  src={unit.images[activeImgIdx]} 
                   alt={unit.title} 
                   className="unit-thumbnail" 
-                  style={{ height: '200px', objectFit: 'cover', width: '100%' }}
+                  style={{ height: '200px', objectFit: 'cover', width: '100%', userSelect: 'none' }}
                 />
+
+                {/* Arrow overlays */}
+                {unit.images.length > 1 && (
+                  <>
+                    {activeImgIdx > 0 && (
+                      <button 
+                        type="button"
+                        onClick={() => setActiveImgIdx(prev => prev - 1)}
+                        style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+                      >
+                        ❯
+                      </button>
+                    )}
+                    {activeImgIdx < unit.images.length - 1 && (
+                      <button 
+                        type="button"
+                        onClick={() => setActiveImgIdx(prev => prev + 1)}
+                        style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+                      >
+                        ❮
+                      </button>
+                    )}
+
+                    {/* Dots indicators */}
+                    <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '10px', zIndex: 2 }}>
+                      {unit.images.map((_, idx) => (
+                        <span 
+                          key={idx} 
+                          onClick={() => setActiveImgIdx(idx)}
+                          style={{ width: '6px', height: '6px', borderRadius: '50%', background: idx === activeImgIdx ? 'var(--secondary-color)' : 'rgba(255,255,255,0.5)', display: 'block', cursor: 'pointer' }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               {unit.images.length > 1 && (
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
@@ -848,7 +953,8 @@ export function UnitDetailsModal({ isOpen, onClose, unit, onDelete }) {
                       key={idx} 
                       src={img} 
                       alt={`detail-${idx}`} 
-                      style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--card-glass-border)' }} 
+                      onClick={() => setActiveImgIdx(idx)}
+                      style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: idx === activeImgIdx ? '2px solid var(--secondary-color)' : '1px solid var(--card-glass-border)', cursor: 'pointer', opacity: idx === activeImgIdx ? 1 : 0.6 }} 
                     />
                   ))}
                 </div>
@@ -893,6 +999,13 @@ export function UnitDetailsModal({ isOpen, onClose, unit, onDelete }) {
                 <span>السعر: <strong className="price-tag" style={{ fontSize: '14px' }}>{unit.price}</strong></span>
               </div>
             )}
+
+            <div className="card-detail-item" style={{ fontSize: '13px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              </svg>
+              <span>عدد المعاينات المجدولة: <strong style={{ color: 'var(--secondary-color)', fontSize: '14px' }}>{unitViewingsCount}</strong></span>
+            </div>
 
             {unit.id && unit.id.toString().startsWith('local_') && (
               <div className="card-detail-item" style={{ fontSize: '13px', color: '#fbbf24' }}>

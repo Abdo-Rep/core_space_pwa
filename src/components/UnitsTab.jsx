@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function UnitsTab({ units, activeSubTab, onOpenAddModal, onSelectUnit }) {
+export default function UnitsTab({ units, viewings = [], activeSubTab, onOpenAddModal, onSelectUnit }) {
   // Filter units by active sub-tab (الكل | للبيع | للإيجار)
   const filteredUnits = activeSubTab === 'الكل'
     ? units
@@ -31,77 +31,60 @@ export default function UnitsTab({ units, activeSubTab, onOpenAddModal, onSelect
         <div className="cards-grid">
           {filteredUnits.map(unit => {
             const hasImages = unit.images && unit.images.length > 0;
+            const unitViewingsCount = (viewings || []).filter(v => v.unit_id === unit.id).length;
             
             return (
-              <div key={unit.id} className="card" onClick={() => onSelectUnit(unit)} style={{ cursor: 'pointer' }}>
-                {/* Media Section: Image thumbnail or Placeholder */}
-                <div className="unit-card-media" style={{ height: '70px' }}>
-                  {hasImages ? (
-                    <>
-                      <img 
-                        src={unit.images[0]} 
-                        alt={unit.title} 
-                        className="unit-thumbnail" 
-                        style={{ height: '70px' }}
-                      />
-                      {unit.images.length > 1 && (
-                        <span className="unit-image-counter">+{unit.images.length - 1} صور</span>
-                      )}
-                    </>
-                  ) : (
-                    <div className="unit-image-placeholder">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h18v18H3V3z" />
-                      </svg>
-                      <span style={{ fontSize: '10px' }}>لا يوجد صور</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Header with badge, title */}
-                <div className="card-header-compact" style={{ borderBottom: '1px dashed rgba(255, 255, 255, 0.08)', paddingBottom: '6px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`}>
-                        {unit.type}
+              <div key={unit.id} className="card" onClick={() => onSelectUnit(unit)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center', padding: '8px' }}>
+                {/* Text Content (Right side in RTL) */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className={`card-badge ${unit.type === 'للبيع' ? 'badge-sale-unit' : 'badge-rent-unit'}`}>
+                      {unit.type}
+                    </span>
+                    {unit.id && unit.id.toString().startsWith('local_') && (
+                      <span className="badge-pending-sync" style={{ padding: '2px 6px', fontSize: '9px' }}>
+                        ⏳ جاري المزامنة...
                       </span>
-                      {unit.id && unit.id.toString().startsWith('local_') && (
-                        <span className="badge-pending-sync">
-                          ⏳ جاري المزامنة...
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="card-title-compact" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {unit.title}
-                    </h3>
+                    )}
+                  </div>
+                  
+                  <h3 className="card-title-compact" style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', fontWeight: '800' }}>
+                    {unit.title}
+                  </h3>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                    {unit.price && (
+                      <span style={{ fontSize: '11px', color: 'var(--text-medium)' }}>
+                        السعر: <strong className="price-tag" style={{ fontSize: '12px' }}>{unit.price}</strong>
+                      </span>
+                    )}
+                    {unitViewingsCount > 0 && (
+                      <span style={{ fontSize: '11px', color: 'var(--secondary-color)', fontWeight: '700' }}>
+                        📅 معاينات: <strong>{unitViewingsCount}</strong>
+                      </span>
+                    )}
+                    {unit.owner_phone && (
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>
+                        📞 {unit.owner_phone}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Details */}
-                <div className="card-body-compact">
-                  {unit.owner_phone && (
-                    <div className="card-detail-item">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                {/* Media Section (Left side in RTL) */}
+                <div className="unit-card-media" style={{ width: '64px', height: '64px', borderRadius: '8px', flexShrink: 0, overflow: 'hidden' }}>
+                  {hasImages ? (
+                    <img 
+                      src={unit.images[0]} 
+                      alt={unit.title} 
+                      className="unit-thumbnail" 
+                      style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="unit-image-placeholder" style={{ height: '100%', width: '100%', gap: '2px' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '18px', height: '18px' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h18v18H3V3z" />
                       </svg>
-                      <span>{unit.owner_phone}</span>
-                    </div>
-                  )}
-
-                  {unit.price && (
-                    <div className="card-detail-item">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        السعر: <strong className="price-tag">{unit.price}</strong>
-                      </span>
-                    </div>
-                  )}
-
-                  {unit.notes && (
-                    <div className="card-notes">
-                      {unit.notes}
                     </div>
                   )}
                 </div>

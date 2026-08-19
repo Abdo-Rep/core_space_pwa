@@ -405,6 +405,7 @@ export default function App() {
         {activeTab === 'units' && (
           <UnitsTab 
             units={units} 
+            viewings={viewings}
             activeSubTab={activeSubTabUnits}
             onOpenAddModal={() => setIsAddUnitOpen(true)}
             onSelectUnit={(unit) => setSelectedUnitForDetails(unit)}
@@ -489,6 +490,7 @@ export default function App() {
         onClose={() => setSelectedUnitForDetails(null)}
         unit={selectedUnitForDetails}
         onDelete={handleDeleteUnit}
+        viewings={viewings}
       />
 
       {/* Add Viewing Modal */}
