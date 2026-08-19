@@ -32,7 +32,7 @@ export const dbGetClients = async () => {
   } catch (err) {
     console.warn('Supabase fetch failed, falling back to localStorage:', err.message);
     const localData = JSON.parse(localStorage.getItem('cs_clients') || '[]');
-    return { data: localData, isLocal: true };
+    return { data: localData, isLocal: true, error: err.message || String(err) };
   }
 };
 
@@ -124,7 +124,7 @@ export const dbGetUnits = async () => {
   } catch (err) {
     console.warn('Supabase fetch failed, falling back to localStorage:', err.message);
     const localData = JSON.parse(localStorage.getItem('cs_units') || '[]');
-    return { data: localData, isLocal: true };
+    return { data: localData, isLocal: true, error: err.message || String(err) };
   }
 };
 
@@ -218,7 +218,7 @@ export const dbGetViewings = async () => {
     console.warn('Supabase fetch failed, falling back to localStorage:', err.message);
     const localData = JSON.parse(localStorage.getItem('cs_viewings') || '[]');
     localData.sort((a, b) => new Date(a.viewing_time) - new Date(b.viewing_time));
-    return { data: localData, isLocal: true };
+    return { data: localData, isLocal: true, error: err.message || String(err) };
   }
 };
 

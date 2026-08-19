@@ -96,6 +96,11 @@ export default function App() {
         const viewingsRes = await dbGetViewings();
         setViewings(viewingsRes.data);
 
+        if (clientsRes.error || unitsRes.error || viewingsRes.error) {
+          const dbErr = clientsRes.error || unitsRes.error || viewingsRes.error;
+          triggerAlert(`تنبيه: فشل الاتصال بالسحابة (يعمل محلياً حالياً). السبب: ${dbErr}`);
+        }
+
         // Run background sync coordinator on load
         await syncOfflineData(
           clientsRes.data,
